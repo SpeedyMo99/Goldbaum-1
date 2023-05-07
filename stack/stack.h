@@ -13,13 +13,6 @@ typedef struct {
 	struct StackElem *prev;
 } StackElem;
 
-void elemInit(StackElem *elem, int value) {
-	elem->value = value;
-	elem->next = NULL;
-	elem->prev = NULL;
-}
-
-
 typedef struct {
 	StackElem *first;
 	StackElem *last;

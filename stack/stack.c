@@ -2,6 +2,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+void elemInit(StackElem *elem, int value) {
+    elem->value = value;
+    elem->next = NULL;
+    elem->prev = NULL;
+}
 
 int stackInit(IntStack *self) {	
 	self->first = NULL; 	// self->first  =  (*self).first
