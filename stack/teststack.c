@@ -4,6 +4,8 @@
 int main() {
 	IntStack stack;
 
+    printf("Hallo");
+
 	if (stackInit(&stack) != 0)
 		return -1;
 	
