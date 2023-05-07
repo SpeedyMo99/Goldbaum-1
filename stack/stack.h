@@ -1,64 +1,50 @@
-#ifndef STACK_H_INCLUDED
-#define STACK_H_INCLUDED
+#ifndef STACK_H
+#define STACK_H
 
-/* *** Strukturen *********************************************************** */
 
-/**@brief Struktur des Stacks.
- */
+#define NULL 0
+#define ERROR_TOP -1
+#define ERROR_POP -2
+
+
 typedef struct {
-    /* hier sollte noch etwas dazu kommen */
+	int value;
+	struct StackElem *next;
+	struct StackElem *prev;
+} StackElem;
+
+void elemInit(StackElem *elem, int value) {
+	elem->value = value;
+	elem->next = NULL;
+	elem->prev = NULL;
+}
+
+
+typedef struct {
+	StackElem *first;
+	StackElem *last;
 } IntStack;
 
-/* *** öffentliche Schnittstelle ******************************************** */
-
-/**@brief Initialisiert einen neuen Stack.
- * @param self  der zu initialisierende Stack
- * @return 0, falls keine Fehler bei der Initialisierung aufgetreten sind,
- *      != 0, ansonsten
- */
-extern int
+extern int 
 stackInit(IntStack *self);
 
-/**@brief Gibt den Stack und alle assoziierten Strukturen frei.
- * @param self  der Stack
- */
-extern void
+extern void 
 stackRelease(IntStack *self);
 
-/**@brief Legt einen Wert auf den intstack.
- * @param self  der intstack
- * @param i     der Wert
- */
-extern void
+extern void 
 stackPush(IntStack *self, int i);
 
-/**@brief Gibt das oberste Element des Stacks zurück.
- * @param self  der Stack
- * @return das oberste Element
- */
-extern int
+extern int 
 stackTop(const IntStack *self);
 
-/**@brief Entfernt und liefert das oberste Element des Stacks.
- * @param self  der Stack
- * @return das oberste Element
- */
-extern int
+extern int 
 stackPop(IntStack *self);
 
-/**@brief Gibt zurück, ob der Stack leer ist.
- * @param self  der Stack
- * @return 0, falls nicht leer,
-        != 0, falls leer
- */
-extern int
+extern int 
 stackIsEmpty(const IntStack *self);
 
-/**@brief Gibt den Inhalt des Stacks beginnend mit dem obersten Element auf der
- * Standardausgabe aus.
- * @param self  der Stack
- */
 extern void
 stackPrint(const IntStack *self);
 
-#endif /* STACK_H_INCLUDED */
+
+#endif

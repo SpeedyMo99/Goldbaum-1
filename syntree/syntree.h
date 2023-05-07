@@ -1,80 +1,203 @@
-#ifndef SYNTREE_H_INCLUDED
-#define SYNTREE_H_INCLUDED
+#ifndef SYNTREE_H
+#define SYNTREE_H
 
-/* *** Strukturen *********************************************************** */
+#include <stdio.h>
+#include <stdlib.h>
 
-typedef /* muss noch definiert werden */ SyntreeNodeID;
 
-/**@brief Struktur des abstrakten Syntaxbaumes.
- */
+
+typedef int SyntreeNodeID;
+
+struct NodeList;
+
+struct SyntreeNode {
+    SyntreeNodeID id;
+    int value;
+    struct NodeList *children;
+};
+typedef struct SyntreeNode SyntreeNode;
+
+struct NodeList {
+    struct SyntreeNode **arr;
+    int size;
+    int index;
+};
+typedef struct NodeList NodeList;
+
 typedef struct {
-    /* hier sollte noch etwas dazu kommen */
+    int size;
+    int count;
+    struct SyntreeNode **arr;
+} NodeHashTable;
+
+typedef struct {
+    struct SyntreeNode *root;
+    struct NodeHashTable *table;
 } Syntree;
 
-/* *** öffentliche Schnittstelle ******************************************** */
 
-/**@brief Initialisiert einen neuen Syntaxbaum.
- * @param self  der zu initialisierende Syntaxbaum
- * @return 0, falls keine Fehler bei der Initialisierung aufgetreten sind,
- *      != 0 ansonsten
- */
+void nodeListInit(NodeList *list) {
+    list->size = 2;
+    list->arr = (SyntreeNode**) calloc(list->size, sizeof(SyntreeNode*));
+    list->index = 0;
+}
+
+SyntreeNode *nodeListGet(NodeList *list, int index) {
+    if (index < 0 || index >= list->size) {
+        fprintf(stderr, "%d is out of bounds!\n", index);
+        exit(-1);
+    }
+    return list->arr[index];
+}
+
+void nodeListSet(NodeList *list, int index, SyntreeNode *node) {
+    if (index < 0 || index >= list->size) {
+        fprintf(stderr, "%d is out of bounds!\n", index);
+        exit(-1);
+    }
+    list->arr[index] = node;
+}
+
+void nodeListEnlarge(NodeList *list) {
+    int newSize = list->size*2;
+    SyntreeNode **newArr = (SyntreeNode**) calloc(newSize, sizeof(SyntreeNode*));
+
+    for (int i = 0; i < list->size; i++) {
+        newArr[i] = list->arr[i];
+    }
+    free(list->arr);
+    list->arr = newArr;
+    list->size = newSize;
+}
+
+void nodeListPushBack(NodeList *list, SyntreeNode *node) {
+    if (list->index >= list->size) {
+        nodeListEnlarge(list);
+    }
+    nodeListSet(list, list->index, node);
+    list->index++;
+}
+
+void nodeListPushFront(NodeList *list, SyntreeNode *node) {
+    if (list -> index >= list->size) {
+        nodeListEnlarge(list);
+    }
+    for (int i = list->index; i > 0; i--) {
+        list->arr[i] = list->arr[i-1];
+    }
+    list->arr[0] = node;
+    list->index++;
+}
+
+#define primeCount 5
+int primes[primeCount] = { 31, 127, 8191, 131071, 524287 };
+
+int hash(SyntreeNodeID key, int size) {
+    return key % size;
+}
+
+void nodeHashTableInit(NodeHashTable *table) {
+    table->size = primes[0];
+    table->count = 0;
+    table->arr = (SyntreeNode**) calloc(table->size, sizeof(SyntreeNode*));
+}
+
+void nodeHashTableRelease(NodeHashTable *table) {
+    free(table->arr);
+}
+
+void nodeHashTableEnlarge(NodeHashTable *table) {
+    int newPrime = -1;
+    for (int i = 0; i < primeCount; i++) {
+        if (primes[i] > table->size) {
+            newPrime = primes[i];
+            break;
+        }
+    }
+    if (newPrime == -1) {
+        fprintf(stderr, "Hashtable got way to large!\n");
+        exit(-1);
+    }
+    SyntreeNode **newArr = (SyntreeNode**) calloc(newPrime, sizeof(SyntreeNode*));
+
+    for (int i = 0; i < table->size; i++) {
+        SyntreeNode *node = table->arr[i];
+        if (node != NULL) {
+            int newHash = hash(node->id, newPrime);
+            while (newArr[newHash % newPrime] != NULL) {
+                newHash++;
+            }
+            newArr[newHash % newPrime] = node;
+        }
+    }
+    free(table->arr);
+    table->arr = newArr;
+    table->size = newPrime;
+}
+
+void nodeHashTableAdd(NodeHashTable *table, SyntreeNodeID key, SyntreeNode *value) {
+    if (((float) table->count / table->size) > 0.5) {
+        nodeHashTableEnlarge(table);
+    }
+    int hashVal = hash(key, table->size);
+    while (table->arr[hashVal % table->size] != NULL) {
+        hashVal++; // Lineares Sondieren
+    }
+    table->arr[hashVal % table->size] = value;
+    table->count++;
+}
+
+SyntreeNode *nodeHashTableGet(NodeHashTable *table, SyntreeNodeID key) {
+    int hashVal = hash(key, table->size);
+    // assert table->arr(hash) != NULL
+    while (((table->arr)[hashVal % table->size])->id != key) {
+        hashVal++;
+    }
+    return table->arr[hashVal % table->size];
+}
+
+int nextNodeId() {
+    static int last = 0;
+    return last++;
+}
+
+void syntreeNodeInit(SyntreeNode *node) {
+    node->id = nextNodeId();
+    node->value = 0;
+
+    NodeList *list = (NodeList*) malloc(sizeof(NodeList));
+    nodeListInit(list);
+    node->children = list;
+}
+
+SyntreeNode *nodeById(Syntree *syntree, SyntreeNodeID id) {
+    return nodeHashTableGet(syntree->table, id);
+}
+
 extern int
 syntreeInit(Syntree *self);
 
-/**@brief Gibt den Syntaxbaum und alle assoziierten Strukturen frei.
- * @param self  der freizugebende Syntaxbaum
- */
 extern void
 syntreeRelease(Syntree *self);
 
-/**@brief Erstellt einen neuen Knoten mit einem Zahlenwert als Inhalt.
- * @param self    der Syntaxbaum
- * @param number  die Zahl
- * @return ID des neu erstellten Knoten
- */
 extern SyntreeNodeID
 syntreeNodeNumber(Syntree *self, int number);
 
-/**@brief Kapselt einen Knoten innerhalb eines anderen Knotens.
- * @param self  der Syntaxbaum
- * @param id    der zu kapselnde Knoten
- * @return ID des neu erstellten Knoten
- */
 extern SyntreeNodeID
 syntreeNodeTag(Syntree *self, SyntreeNodeID id);
 
-/**@brief Kapselt zwei Knoten innerhalb eines Knoten.
- * @param self  der Syntaxbaum
- * @param id1   erster Knoten
- * @param id2   zweiter Knoten
- * @return ID des neu erstellten Knoten
- */
 extern SyntreeNodeID
 syntreeNodePair(Syntree *self, SyntreeNodeID id1, SyntreeNodeID id2);
 
-/**@brief Hängt einen Knoten an das Ende eines Listenknotens.
- * @param self  der Syntaxbaum
- * @param list  Listenknoten
- * @param elem  anzuhängender Knoten
- * @return ID des Listenknoten
- */
 extern SyntreeNodeID
 syntreeNodeAppend(Syntree *self, SyntreeNodeID list, SyntreeNodeID elem);
 
-/**@brief Hängt einen Knoten an den Anfang eines Listenknotens.
- * @param self  der Syntaxbaum
- * @param elem  anzuhängender Knoten
- * @param list  Listenknoten
- * @return ID des Listenknoten
- */
 extern SyntreeNodeID
 syntreeNodePrepend(Syntree *self, SyntreeNodeID elem, SyntreeNodeID list);
 
-/**@brief Gibt alle Zahlenknoten rekursiv (depth-first) aus.
- * @param self  der Syntaxbaum
- * @param root  der Wurzelknoten
- */
 extern void
 syntreePrint(const Syntree *self, SyntreeNodeID root);
 
-#endif /* SYNTREE_H_INCLUDED */
+
+
+#endif
